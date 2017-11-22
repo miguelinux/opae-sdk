@@ -49,14 +49,14 @@ else()
     GIT_TAG "release-1.8.0"
     UPDATE_COMMAND ""
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/gtest
-    CMAKE_ARGS -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+    CMAKE_ARGS -DBUILD_SHARED_LIBS=ON
     # Disable install step
     INSTALL_COMMAND "")
   set (gtest_root "${CMAKE_CURRENT_BINARY_DIR}/gtest/src/gtest/googletest")
   message(STATUS "gtest locatet at: ${gtest_root}")
 
   # Create a libgtest target to be used as a dependency by test programs
-  add_library(libgtest IMPORTED STATIC GLOBAL)
+  add_library(libgtest IMPORTED SHARED GLOBAL)
   add_dependencies(libgtest gtest)
 
   # Get GTest source and binary directories from CMake project
@@ -64,7 +64,7 @@ else()
 
   # Set libgtest properties
   set_target_properties(libgtest PROPERTIES
-    "IMPORTED_LOCATION" "${binary_dir}/googlemock/gtest/libgtest.a"
+    "IMPORTED_LOCATION" "${binary_dir}/googlemock/gtest/libgtest.so"
     "IMPORTED_LINK_INTERFACE_LIBRARIES" "${CMAKE_THREAD_LIBS_INIT}")
 
   # Export gtest variables
