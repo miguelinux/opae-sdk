@@ -26,7 +26,8 @@
 #include <iostream>
 #include <getopt.h>
 #include <json-c/json.h>
-#include <common_test.h>
+#include <unistd.h>
+#include <iostream>
 #include <types_int.h>
 #include "gtest/gtest.h"
 
@@ -39,35 +40,30 @@ using namespace std;
 using namespace common_test;
 
 void clean() {
-	for (auto& item : config_map) {
-		free(item.second);
-	}
+	cout << "cleaning gtest sute" << endl;
 }
 
 struct option longopts[] = {{"help", no_argument, NULL, 'h'},
-                            {"bus", required_argument, NULL, 'b'},
-                            {"virt", no_argument, NULL, 'v'},
-                            {"json", required_argument, NULL, 'j'},
-                            {"plaform", required_argument, NULL, 'p'},
-                            {0, 0, 0, 0}};
+							{"bus", required_argument, NULL, 'b'},
+							{"virt", no_argument, NULL, 'v'},
+							{"json", required_argument, NULL, 'j'},
+							{"plaform", required_argument, NULL, 'p'},
+							{0, 0, 0, 0}};
 
 void show_help() {
 	cout << "Usage: gtapi" << endl
-	     << endl
-	     << "\t-b,--bus <bus> number." << endl
-	     << "\t-v,--virt <VM> disable auto-reconfiguration of NLB0." << endl
-	     << "\t-j,--json <path> provide path to bitstream json file." << endl
-	     << "\t-p,--platform <ase/fpga> select which platform to run test."
-	     << endl
-	     << endl;
+		 << endl
+		 << "\t-b,--bus <bus> number." << endl
+		 << "\t-v,--virt <VM> disable auto-reconfiguration of NLB0." << endl
+		 << "\t-p,--platform <ase/fpga> select which platform to run test."
+		 << endl
+		 << endl;
 }
 
 int main(int argc, char** argv) {
 	int getopt_ret;
 	int option_index;
 
-	const char* path;
-	path = "../tests/configuration.json";
 
 	while ((getopt_ret = getopt_long(argc, argv, ":hb:vj:p:", longopts,
 					 &option_index)) != -1) {
@@ -94,11 +90,6 @@ int main(int argc, char** argv) {
 			cout << "Disabling auto reconfiguration." << endl;
 			break;
 
-		case 'j':
-			cout << "Path to configuration json file " << tmp_optarg << endl;
-			path = tmp_optarg;
-			break;
-
 		case 'p':
 			if (strcmp(tmp_optarg, "ase") == 0) {
 				GlobalOptions::Instance().Platform(1);
@@ -106,7 +97,7 @@ int main(int argc, char** argv) {
 				GlobalOptions::Instance().Platform(0);
 			}
 			cout << "Select Platform: " << GlobalOptions::Instance().Platform()
-			     << endl;
+					<< endl;
 			break;
 
 		case ':':
@@ -120,7 +111,6 @@ int main(int argc, char** argv) {
 	}
 
 	::testing::InitGoogleTest(&argc, argv);
-	fetchConfiguration(path);
 
 	signed retval = RUN_ALL_TESTS();
 	signed i = atexit(clean);

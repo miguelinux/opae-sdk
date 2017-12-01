@@ -36,13 +36,21 @@
 #include <map>
 #include <random>
 #include <string>
+#include <string.h>
 
 #include <json/json.h>
+#ifndef BUILD_ASE
 #include <log_int.h>
+#endif
 #include <opae/access.h>
 #include <opae/fpga.h>
 #include <opae/properties.h>
 #include <opae/types_enum.h>
+#ifdef BUILD_ASE
+#include "ase/api/src/types_int.h"
+#else
+#include "types_int.h"
+#endif
 #include <sys/mman.h>
 #include <types_int.h>
 
@@ -159,32 +167,49 @@ namespace common_test {
 // begin convenience functions for straight C unit tests
 
 inline void token_for_fme0(struct _fpga_token* _tok) {
+#ifdef BUILD_ASE
+	memcpy(_tok->accelerator_id,FPGA_FME_ID, sizeof(fpga_guid));
+	_tok->magic = ASE_TOKEN_MAGIC;
+	_tok->ase_objtype=FPGA_DEVICE;
+#else
 	// slot 0 FME
 	strncpy_s(_tok->sysfspath, sizeof(_tok->sysfspath),
-		  SYSFS_FPGA_CLASS_PATH "/intel-fpga-dev.0/intel-fpga-fme.0",
-		  SYSFS_PATH_MAX - 1);
+			SYSFS_FPGA_CLASS_PATH "/intel-fpga-dev.0/intel-fpga-fme.0",
+			SYSFS_PATH_MAX - 1);
 	strncpy_s(_tok->devpath, sizeof(_tok->devpath),
-		  FPGA_DEV_PATH "/intel-fpga-fme.0", DEV_PATH_MAX - 1);
+			FPGA_DEV_PATH "/intel-fpga-fme.0", DEV_PATH_MAX - 1);
 	_tok->magic = FPGA_TOKEN_MAGIC;
+#endif
 };
 
 inline void token_for_afu0(struct _fpga_token* _tok) {
+#ifdef BUILD_ASE
+	memcpy(_tok->accelerator_id,ASE_GUID, sizeof(fpga_guid));
+	_tok->magic = ASE_TOKEN_MAGIC;
+	_tok->ase_objtype=FPGA_ACCELERATOR;
+#else
 	// slot 0 AFU
 	strncpy_s(_tok->sysfspath, sizeof(_tok->sysfspath),
-		  SYSFS_FPGA_CLASS_PATH "/intel-fpga-dev.0/intel-fpga-port.0",
-		  SYSFS_PATH_MAX - 1);
+		SYSFS_FPGA_CLASS_PATH "/intel-fpga-dev.0/intel-fpga-port.0",
+		SYSFS_PATH_MAX - 1);
 	strncpy_s(_tok->devpath, sizeof(_tok->devpath),
-		  FPGA_DEV_PATH "/intel-fpga-port.0", DEV_PATH_MAX - 1);
+		FPGA_DEV_PATH "/intel-fpga-port.0", DEV_PATH_MAX - 1);
 	_tok->magic = FPGA_TOKEN_MAGIC;
+#endif
 };
 
 inline void token_for_invalid(struct _fpga_token* _tok) {
+#ifdef BUILD_ASE
+	memcpy(_tok->accelerator_id,WRONG_ASE_GUID, sizeof(fpga_guid));
+	_tok->magic = FPGA_TOKEN_MAGIC;
+#else
 	// slot 0 AFU
 	strncpy_s(_tok->sysfspath, sizeof(_tok->sysfspath),
-		  SYSFS_FPGA_CLASS_PATH "/invalid_token", SYSFS_PATH_MAX - 1);
+			SYSFS_FPGA_CLASS_PATH "/invalid_token", SYSFS_PATH_MAX - 1);
 	strncpy_s(_tok->devpath, sizeof(_tok->devpath),
-		  FPGA_DEV_PATH "/invalid_token", DEV_PATH_MAX - 1);
+			FPGA_DEV_PATH "/invalid_token", DEV_PATH_MAX - 1);
 	_tok->magic = FPGA_TOKEN_MAGIC;
+#endif
 };
 
 inline bool token_is_fme0(fpga_token t) {
@@ -192,79 +217,61 @@ inline bool token_is_fme0(fpga_token t) {
 
 	int indicator = 0;
 	signed retval = 0;
+#ifdef BUILD_ASE
+	if(_t->magic != ASE_TOKEN_MAGIC)
+		return 0;
+	else
+		return ((0 == memcmp(_t->accelerator_id,FPGA_FME_ID, sizeof(fpga_guid))));
+#else
+  if (strcmp_s(_t->sysfspath, sizeof(_t->sysfspath),
+               SYSFS_FPGA_CLASS_PATH "/intel-fpga-dev.0/intel-fpga-fme.0",
+               &indicator)) {
+    perror("error in string compare");
+  } else {
+    retval += indicator;
+  }
 
-	if (strcmp_s(_t->sysfspath, sizeof(_t->sysfspath),
-		     SYSFS_FPGA_CLASS_PATH "/intel-fpga-dev.0/intel-fpga-fme.0",
-		     &indicator)) {
-		perror("error in string compare");
-	} else {
-		retval += indicator;
-	}
-
-	if (strcmp_s(_t->devpath, sizeof(_t->sysfspath), "/dev/intel-fpga-fme.0",
-		     &indicator)) {
-		perror("error in string compare");
-	} else {
-		retval += indicator;
-	}
-	return (retval == 0);
+  if (strcmp_s(_t->devpath, sizeof(_t->sysfspath), "/dev/intel-fpga-fme.0",
+               &indicator)) {
+    perror("error in string compare");
+  } else {
+    retval += indicator;
+  }
+  return (retval == 0);
+#endif
 };
 
 inline bool token_is_afu0(fpga_token t) {
-	struct _fpga_token* _t = (struct _fpga_token*)t;
+  struct _fpga_token* _t = (struct _fpga_token*)t;
 
-	int indicator = 0;
-	signed retval = 0;
+  int indicator = 0;
+  signed retval = 0;
+#ifdef BUILD_ASE
+	     if(_t->magic != ASE_TOKEN_MAGIC)
+		 return 0;
+	     else
+	         return ((0 == memcmp(_t->accelerator_id,ASE_GUID, sizeof(fpga_guid))));
+#else
+  if (strcmp_s(_t->sysfspath, sizeof(_t->sysfspath),
+               SYSFS_FPGA_CLASS_PATH "/intel-fpga-dev.0/intel-fpga-port.0",
+               &indicator)) {
+    perror("error in string compare");
+  } else {
+    retval += indicator;
+  }
 
-	if (strcmp_s(_t->sysfspath, sizeof(_t->sysfspath),
-		     SYSFS_FPGA_CLASS_PATH "/intel-fpga-dev.0/intel-fpga-port.0",
-		     &indicator)) {
-		perror("error in string compare");
-	} else {
-		retval += indicator;
-	}
-
-	if (strcmp_s(_t->devpath, sizeof(_t->sysfspath),
-		     FPGA_DEV_PATH "/intel-fpga-port.0", &indicator)) {
-		perror("error in string compare");
-	} else {
-		retval += indicator;
-	}
-	return (retval == 0);
+  if (strcmp_s(_t->devpath, sizeof(_t->sysfspath),
+               FPGA_DEV_PATH "/intel-fpga-port.0", &indicator)) {
+    perror("error in string compare");
+  } else {
+    retval += indicator;
+  }
+  return (retval == 0);
+#endif
 };
-
-// end of convenience functions for straight C unit tests
-
-/**
- * @brief      Enumeration for configuration parsing.
- */
-enum config_enum {
-	BITSTREAM_MODE0 = 0,
-	BITSTREAM_MODE3,
-	OPAE_INSTALL_PATH
-};
-
-enum nlbmode { NLB_MODE_0 = 0, NLB_MODE_3 };
 enum base { HEX, DEC };
-
-extern std::map<config_enum, char*> config_map;
-
-bool checkReturnCodes(fpga_result result, std::string line);
-size_t fillBSBuffer(const char* filename, uint8_t** bsbuffer);
-
-fpga_result loadBitstream(const char* path, fpga_token tok);
-uint32_t getAllTokens(fpga_token* toks, fpga_objtype, int cbus = 0,
-                      fpga_guid = NULL);
-signed exerciseNLB0Function(fpga_token tok);
-signed exerciseNLB3Function(fpga_token tok);
-signed doExternalNLB(fpga_token tok, nlbmode);
-void sayHello(fpga_token tok);
-int tryOpen(bool shared, uint8_t bus);
-void closePRInterfaceIDHandle();
-void fetchConfiguration(const char* path);
 void checkIOErrors(const char*, uint64_t);
 void printIOError(std::string line);
-
 // read functions determine base by format in sequence
 fpga_result sysfs_read_64(const char*, uint64_t*);
 fpga_result read_sysfs_value(const char*, uint64_t*, fpga_token);
@@ -275,47 +282,6 @@ fpga_result write_sysfs_value(const char*, uint64_t, fpga_token, base);
 
 bool check_path_is_dir(const char*);
 bool feature_is_supported(const char*, fpga_token);
-
-/**
- * @brief      Random integer generator
- * @details    Used to generate random integers between a given range. Usage
- *             random<1,100> r; int number = r();
- * @tparam     lo_      the low end of the range
- * @tparam     hi_      the high end of the range
- * @tparam     IntTYpe  the type of integer to generate short, int, long,
- * unsigned,
- */
-template <int lo_, int hi_, typename IntType = int>
-class Random {
-public:
-	/// @brief Random<> constructor
-	Random() : gen_(rdev_()), dist_(lo_, hi_) {}
-
-	/**
-	 * @brief      generates a Random integer
-	 * @return     a Random number between range lo_ and hi_ */
-	int operator()() { return dist_(gen_); }
-
-private:
-	std::random_device rdev_;
-	std::mt19937 gen_;
-	std::uniform_int_distribution<IntType> dist_;
-};
-
-/**
- * @brief      Base fixture class, primarily used to enable fpga
- *             enumeration in gtest.
- */
-class BaseFixture {
-public:
-	int number_found = 0;
-	fpga_token tokens[MAX_TOKENS] = {0};
-	int index = 0;
-
-	void TestAllFPGA(fpga_objtype, bool, std::function<void()>,
-fpga_guid guid = NULL);
-};
-
-}  // end namespace
+}
 
 #endif  // __COMMON_STRESS_H__
