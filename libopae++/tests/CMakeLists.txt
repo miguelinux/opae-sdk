@@ -31,7 +31,8 @@ find_package(GTest)
 
 set(SRC gtmain.cpp
     unit/gtEnumerate.cpp
-    unit/gtOpenClose.cpp)
+    unit/gtOpenClose.cpp
+    unit/gtBuffer.cpp)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include ${GTEST_INCLUDE_DIRS})
 add_executable(gtcxx ${SRC})
 target_link_libraries(gtcxx  opae-c opae-cxx-core uuid ${GTEST_BOTH_LIBRARIES})
